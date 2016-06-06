@@ -1,20 +1,32 @@
 ---
 - name: ensure packages are installed
-  apt: name={{item}}
+  yum: name={{item}}
   with_items:
-    - postgresql
-    - libpq-dev
-    - python-psycopg2
+    - "{{ pgsql_pkg }}-server"
+    - "{{ pgsql_pkg }}-devel"
+    - "{{ psycopg2 }}"
+
+- stat: path=/var/lib/pgsql{{ pgsql_short }}/data/pg_log
+  register: pglog
+
+- name: ensure datadir is initialized
+  command: service {{ pgsql_pkg }} initdb
+  when: pglog.stat.exists == False
+  sudo_user: "{{ pgsql_user }}"
+
+- name: ensure postgresql is started
+  service:
+    name: "{{ pgsql_pkg }}"
+    state: started
+  when: pglog.stat.exists == True
 
 - name: ensure database is created
-  sudo: yes
-  sudo_user: postgres
-  postgresql_db: 
+  sudo_user: "{{ pgsql_user }}"
+  postgresql_db:
     name: "{{ db_name }}"
 
 - name: ensure user has access to database
-  sudo: yes
-  sudo_user: postgres
+  sudo_user: "{{ pgsql_user }}"
   postgresql_user: 
     db: "{{ db_name }}"
     name: "{{ db_user }}"
@@ -22,8 +34,32 @@
     priv: ALL
 
 - name: ensure user does not have unnecessary privilege
-  sudo: yes
-  sudo_user: postgres
+  sudo_user: "{{ pgsql_user }}"
   postgresql_user: 
     name: "{{ db_user }}"
     role_attr_flags: NOSUPERUSER,NOCREATEDB
+
+- name: edit postgresql.conf
+  lineinfile:
+    dest: /var/lib/pgsql{{ pgsql_short }}/data/postgresql.conf
+    state: present
+    regexp: "^#?listen_addresses\\s*=\\s*'localhost'"
+    line: "listen_addresses = '*'"
+
+- name: edit pg_hba.conf #1
+  lineinfile:
+    dest: /var/lib/pgsql{{ pgsql_short }}/data/pg_hba.conf
+    state: present
+    insertafter: "#\\s+IPv4\\s+local\\s+connections:"
+    line: "host all all {{ pg_hba_addr }} md5"
+
+- name: edit pg_hba.conf #2
+  replace:
+    dest: /var/lib/pgsql{{ pgsql_short }}/data/pg_hba.conf
+    regexp: "(^host\\s+all\\s+all\\s+127.0.0.1/32\\s+)ident"
+    replace: '\1 md5'
+
+- name: ensure postgresql config is restarted
+  service:
+    name: "{{ pgsql_pkg }}"
+    state: restarted

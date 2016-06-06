@@ -2,13 +2,24 @@
 # Define the host you want to run the playbook in a file called hosts
 # run "ansible-playbook play.yml -i hosts" from this directory
 - hosts: all
-  remote_user: root
+  remote_user: ec2-user
+  sudo: yes
   vars:
-    mattermost_version: v1.1.0
+    mattermost_version: 3.0.3
+    pgsql_short: 94
+    pgsql_pkg: postgresql{{ pgsql_short }}
+    pgsql_user: postgres
+    psycopg2: python27-psycopg2
+
+   # need this later for pg_hba.conf
+   # requires: pip install netaddr for jinja2 filter to work
+    net_mask: "{{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}"
+    net_cidr_prefix: "{{ net_mask | ipaddr('prefix') }}"
+    pg_hba_addr: "{{ ansible_default_ipv4.address }}/{{ net_cidr_prefix }}"
 
    #The user the mattermost process will run as. The group will match.
     mattermost_user: mattermost
-   
+
    #These do not need to be edited. 
     db_user: mmmost
     db_name: mattermost

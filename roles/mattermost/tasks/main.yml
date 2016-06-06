@@ -1,46 +1,41 @@
 ---
-- name: download code from GitHub
-  get_url: 
-    url: https://github.com/mattermost/platform/releases/download/{{ mattermost_version }}/mattermost.tar.gz
-    dest: /tmp/
-
-- name: unpack mattermost archive
+- name: get mattermost from github
   unarchive: 
-    src: /tmp/mattermost.tar.gz 
-    dest: /opt/
+    src: https://releases.mattermost.com/{{mattermost_version}}/mattermost-team-{{mattermost_version}}-linux-amd64.tar.gz
+    dest: /opt
     copy: no
 
-- name: Edit /opt/mattermost/config/config.json
-  lineinfile:
-    dest: /opt/mattermost/config/config.json
-    regexp: '"DriverName": "mysql",'
-    line: '        "DriverName": "postgres",'
-
-- name: Edit /opt/mattermost/config/config.json
-  lineinfile:
-    dest: /opt/mattermost/config/config.json
-    regexp: '"DataSource":'
-    line: '        "DataSource": "postgres://{{ db_user }}:{{ db_password }}@127.0.0.1:5432/{{ db_name }}?sslmode=disable&connect_timeout=10",'
-
-- name: Create mattermost user
+- name: create mattermost user
   user: 
     name: "{{ mattermost_user }}"
     system: yes
-    createhome: no        
+    createhome: no
 
-- name: Create mattermost init script
+- name: create mattermost init script
   template:
-    src: init_script
+    src: init_script.ec2
     dest: /etc/init.d/mattermost
     owner: root
     group: root
     mode: 0755
 
-- name: Change mattermost directory permissions
+- name: edit /opt/mattermost/config/config.json
+  lineinfile:
+    dest: /opt/mattermost/config/config.json
+    regexp: '"DriverName": "mysql",'
+    line: '        "DriverName": "postgres",'
+
+- name: edit /opt/mattermost/config/config.json
+  lineinfile:
+    dest: /opt/mattermost/config/config.json
+    regexp: '"DataSource":'
+    line: '        "DataSource": "postgres://{{ db_user }}:{{ db_password }}@127.0.0.1:5432/{{ db_name }}?sslmode=disable&connect_timeout=10",'
+
+- name: change mattermost directory permissions
   file:
     path: /opt/mattermost
     state: directory
     owner: "{{ mattermost_user }}"
     group: "{{ mattermost_user }}"
     recurse: yes
-  notify: start mattermost          
+  notify: start mattermost

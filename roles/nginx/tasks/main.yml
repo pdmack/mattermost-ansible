@@ -1,19 +1,9 @@
 ---
 - name: install nginx
-  apt:
+  yum:
     name: nginx
 
-- name: apply nginx config template
-  template:  
-    src: mattermost.j2
-    dest: /etc/nginx/sites-available/mattermost
-
-- name: remove nginx default site
-  file:
-    path: /etc/nginx/sites-enabled/default
-    state: absent
-
-- name: Add SSL directory in /etc/nginx
+- name: add SSL directory in /etc/nginx
   file:
     path: /etc/nginx/ssl
     state: directory
@@ -23,9 +13,8 @@
   args:
     creates: /etc/nginx/ssl/mattermost.crt
 
-- name: add mattermost site
-  file:
-    path: /etc/nginx/sites-enabled/mattermost
-    state: link
-    src: /etc/nginx/sites-available/mattermost
+- name: apply nginx config template
+  template:
+    src: mattermost.j2
+    dest: /etc/nginx/conf.d/mattermost.conf
   notify: restart nginx
