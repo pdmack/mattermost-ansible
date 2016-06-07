@@ -13,7 +13,7 @@
 
 - name: create mattermost init script
   template:
-    src: init_script.ec2
+    src: init_script
     dest: /etc/init.d/mattermost
     owner: root
     group: root

@@ -12,13 +12,12 @@
 - name: ensure datadir is initialized
   command: service {{ pgsql_pkg }} initdb
   when: pglog.stat.exists == False
-  sudo_user: "{{ pgsql_user }}"
 
 - name: ensure postgresql is started
   service:
     name: "{{ pgsql_pkg }}"
     state: started
-  when: pglog.stat.exists == True
+    enabled: yes
 
 - name: ensure database is created
   sudo_user: "{{ pgsql_user }}"
@@ -59,7 +58,7 @@
     regexp: "(^host\\s+all\\s+all\\s+127.0.0.1/32\\s+)ident"
     replace: '\1 md5'
 
-- name: ensure postgresql config is restarted
+- name: ensure postgresql is restarted (new config)
   service:
     name: "{{ pgsql_pkg }}"
     state: restarted
